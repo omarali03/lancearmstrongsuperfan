@@ -31,7 +31,7 @@ map.on('load', async () => {
   try {
     const jsonurl = 'https://dsc106.com/labs/lab07/data/bluebikes-stations.json';
     const jsonData = await d3.json(jsonurl);
-    const stations = jsonData.data.stations;  // Access the stations array
+    let stations = jsonData.data.stations;  // Access the stations array (use let here)
 
     // Fetch the traffic data using let instead of const
     let trips;
