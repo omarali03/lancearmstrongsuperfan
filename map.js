@@ -59,7 +59,6 @@ map.on('load', async () => {
     console.log('Departures:', departures);
     console.log('Arrivals:', arrivals);
 
-    // Add traffic data (arrivals, departures, and totalTraffic) to each station
     stations = stations.map((station) => {
       let id = station.short_name;
       station.arrivals = arrivals.get(id) ?? 0;
@@ -87,14 +86,12 @@ map.on('load', async () => {
       .attr('stroke-width', 1)    // Circle border thickness
       .attr('opacity', 0.8);      // Circle opacity
 
-    // Function to update circle positions when the map moves/zooms
     function updatePositions() {
       circles
         .attr('cx', (d) => getCoords(d).cx)  // Set the x-position using projected coordinates
         .attr('cy', (d) => getCoords(d).cy); // Set the y-position using projected coordinates
     }
 
-    // Call the update function on map interactions
     map.on('move', updatePositions);
     map.on('zoom', updatePositions);
     map.on('resize', updatePositions);
@@ -107,3 +104,33 @@ map.on('load', async () => {
     console.error('Error loading station data:', error); // Handle errors if the data fails to load
   }
 });
+
+const slider = document.getElementById('time-slider');
+const selectedTime = document.getElementById('selected-time');
+
+// Update the displayed time when the slider is moved
+slider.addEventListener('input', () => {
+  const timeValue = slider.value;
+  const hours = Math.floor(timeValue / 60);
+  const minutes = timeValue % 60;
+
+  // Display time or "any time" when the slider is at -1
+  if (timeValue == -1) {
+    selectedTime.innerHTML = '(any time)';
+  } else {
+    selectedTime.innerHTML = `${hours}:${minutes.toString().padStart(2, '0')} PM`;
+  }
+
+  filterDataByTime(timeValue);
+});
+
+function filterDataByTime(timeValue) {
+  if (timeValue != -1) {
+    const filteredTrips = trips.filter((trip) => {
+      const tripStartTime = new Date(trip.started_at);
+      const tripStartMinutes = tripStartTime.getHours() * 60 + tripStartTime.getMinutes();
+      return tripStartMinutes <= timeValue;
+    });
+
+  }
+}
