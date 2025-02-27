@@ -33,22 +33,22 @@ map.on('load', async () => {
   });
 
   // Add the Cambridge bike lane data source
-  map.addSource('cambridge_route', {
-    type: 'geojson',
-    data: 'https://data.cambridgema.gov/resource/h7ei-5m9b.geojson' // Cambridge dataset
-  });
+// map.addSource('cambridge_route', {
+//   type: 'geojson',
+//   data: 'https://data.cambridgema.gov/resource/h7ei-5m9b.geojson'
+// });
 
-  // Add a layer for Cambridge bike lanes
-  map.addLayer({
-    id: 'bike-lanes-cambridge',
-    type: 'line',
-    source: 'cambridge_route',
-    paint: {
-      'line-color': '#FF6F00', // Bright orange to differentiate from Boston
-      'line-width': 5,
-      'line-opacity': 0.6
-    }
-  });
+// map.addLayer({
+//   id: 'bike-lanes-cambridge',
+//   type: 'line',
+//   source: 'cambridge_route',
+//   paint: {
+//     'line-color': '#FF6F00',
+//     'line-width': 5,
+//     'line-opacity': 0.6
+//   }
+// });
+
   try {
     const jsonurl = 'https://dsc106.com/labs/lab07/data/bluebikes-stations.json';
     
@@ -56,7 +56,7 @@ map.on('load', async () => {
     const jsonData = await d3.json(jsonurl);
     let stations = jsonData.data.stations;
     console.log('Stations Array:', stations); // Log stations array
-    
+
   } catch (error) {
     console.error('Error loading JSON:', error); // Handle errors
   }
