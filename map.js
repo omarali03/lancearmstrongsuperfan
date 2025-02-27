@@ -12,3 +12,20 @@ const map = new mapboxgl.Map({
     minZoom: 5, // Minimum zoom level
     maxZoom: 18 // Maximum zoom level
   });
+
+  map.addSource('boston_route', {
+    type: 'geojson',
+    data: 'https://bostonopendata-boston.opendata.arcgis.com/datasets/boston::existing-bike-network-2022.geojson'
+  });
+
+  // Add a layer to visualize the bike lanes
+  map.addLayer({
+    id: 'bike-lanes',
+    type: 'line',
+    source: 'boston_route',
+    paint: {
+      'line-color': 'green', // Green bike lanes
+      'line-width': 3, // Line thickness
+      'line-opacity': 0.6 // Slight transparency
+    }
+});
