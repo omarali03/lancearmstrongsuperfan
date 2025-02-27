@@ -80,6 +80,11 @@ function filterTripsbyTime(trips, timeFilter) {
     });
 }
 
+// Add the quantize scale for traffic flow
+const stationFlow = d3.scaleQuantize()
+  .domain([0, 1])  // Ratio of departures to total traffic
+  .range([0, 0.5, 1]);  // Three discrete values: 0 (more arrivals), 1 (more departures), 0.5 (equal)
+
 // Function to update the scatter plot
 function updateScatterPlot(timeFilter) {
   // Only update the scatter plot if trips and stations are loaded
@@ -98,12 +103,13 @@ function updateScatterPlot(timeFilter) {
   // Dynamically adjust the range of the radius scale based on whether filtering is applied
   radiusScale.range(timeFilter === -1 ? [0, 25] : [3, 50]);
 
-  // Update the scatterplot by adjusting the radius of circles
+  // Update the scatterplot by adjusting the radius of circles and the traffic flow color
   circles
     .data(stationsWithTraffic, d => d.short_name)
     .attr('r', d => radiusScale(d.totalTraffic)) // Update circle sizes
     .attr('cx', d => getCoords(d).cx) // Make sure positions are correct
-    .attr('cy', d => getCoords(d).cy);
+    .attr('cy', d => getCoords(d).cy)
+    .style('--departure-ratio', (d) => stationFlow(d.departures / d.totalTraffic));  // Apply the traffic flow ratio for color
     
   // Update tooltips
   circles.select('title')
@@ -226,25 +232,3 @@ map.on('load', async () => {
     console.error('Error loading data:', error);
   }
 });
-
-// Add the quantize scale for traffic flow
-const stationFlow = d3.scaleQuantize()
-  .domain([0, 1])  // Ratio of departures to total traffic
-  .range([0, 0.5, 1]);  // Three discrete values: 0 (more arrivals), 1 (more departures), 0.5 (equal)
-
-function updateScatterPlot(timeFilter) {
-  if (!trips || !stations) return;
-
-  const filteredTrips = filterTripsbyTime(trips, timeFilter);
-  const filteredStations = computeStationTraffic(stations, filteredTrips);
-
-  // Dynamically adjust the range of the radius scale based on whether filtering is applied
-  radiusScale.range(timeFilter === -1 ? [0, 25] : [3, 50]);
-
-  // Update the scatterplot by adjusting the radius of circles and the traffic flow color
-  circles
-    .data(filteredStations, (d) => d.short_name)
-    .join('circle')
-    .attr('r', (d) => radiusScale(d.totalTraffic))
-    .style('--departure-ratio', (d) => stationFlow(d.departures / d.totalTraffic));  // Apply the traffic flow ratio for color
-}
