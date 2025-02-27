@@ -128,35 +128,21 @@ circle {
     );
   }
   
-  /* Style for the Legend */
-.legend {
+  .legend {
     display: flex;
     margin-block: 1em;
-    gap: 1px; /* Ensure blocks don't touch */
-    background: #f5f5f5; /* Light background */
-    border-radius: 5px; /* Rounded corners for the legend */
+    gap: 20px; /* Create spacing between each block */
+    align-items: center; /* Align text and color swatch vertically */
   }
   
-  .legend div {
-    flex: 1; /* Ensure each label takes equal space */
-    padding: 8px;
-    text-align: center; /* Center the text */
+  .legend .swatch {
+    width: 30px; /* Fixed width for color swatches */
+    height: 30px; /* Fixed height for color swatches */
+    border-radius: 50%; /* Round the swatches to make them circles */
+  }
+  
+  .legend span {
     font-weight: bold;
-    color: white; /* Make text readable */
-    display: flex;
-    justify-content: center;
-    align-items: center;
+    font-size: 14px;
+    line-height: 30px; /* Align text vertically with the swatch */
   }
-  
-  .legend div:nth-child(1) {
-    background-color: hsl(207, 100%, 50%); /* More departures - Blue */
-  }
-  
-  .legend div:nth-child(2) {
-    background-color: hsl(300, 100%, 50%); /* Balanced - Purple */
-  }
-  
-  .legend div:nth-child(3) {
-    background-color: hsl(30, 100%, 50%); /* More arrivals - Orange */
-  }
-  
