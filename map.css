@@ -24,3 +24,24 @@ html, body {
     pointer-events: none; /* Allows map interactions */
   }
   
+  header {
+    display: flex;
+    gap: 1em;
+    align-items: baseline;
+    margin-bottom: 1em;
+  }
+  
+  #time-slider {
+    flex-grow: 1;
+  }
+  
+  #selected-time {
+    display: block;
+    margin-top: 0.5em;
+    color: #888;
+  }
+  
+  em {
+    color: #ccc;
+    font-style: italic;
+  }
