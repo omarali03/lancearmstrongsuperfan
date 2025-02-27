@@ -33,9 +33,14 @@ map.on('load', async () => {
     const jsonData = await d3.json(jsonurl);
     const stations = jsonData.data.stations;  // Access the stations array
 
-    // Fetch the traffic data
-    const trips = await d3.csv('https://dsc106.com/labs/lab07/data/bluebikes-traffic-2024-03.csv');
-    console.log('Loaded Trips Data:', trips); // Check the structure of the trips data
+    // Fetch the traffic data using let instead of const
+    let trips;
+    try {
+      trips = await d3.csv('https://dsc106.com/labs/lab07/data/bluebikes-traffic-2024-03.csv');
+      console.log('Loaded Trips Data:', trips); // Check the structure of the trips data
+    } catch (error) {
+      console.error('Error loading trips data:', error); // Handle errors if the data fails to load
+    }
 
     // Calculate departures
     const departures = d3.rollup(
@@ -65,6 +70,12 @@ map.on('load', async () => {
 
     console.log('Stations with Traffic:', stations); // Check the data for each station
 
+    // Create a square root scale for circle radius based on traffic data
+    const radiusScale = d3
+      .scaleSqrt()  // Square root scale to prevent misrepresentation of data
+      .domain([0, d3.max(stations, (d) => d.totalTraffic)]) // Domain based on traffic values
+      .range([0, 25]); // Circle radius range (adjust the maximum radius as needed)
+
     // Append circles to the SVG for each station
     const circles = svg.selectAll('circle')
       .data(stations)
@@ -93,6 +104,6 @@ map.on('load', async () => {
     updatePositions();
 
   } catch (error) {
-    console.error('Error loading trips data:', error); // Handle errors if the data fails to load
+    console.error('Error loading station data:', error); // Handle errors if the data fails to load
   }
 });
