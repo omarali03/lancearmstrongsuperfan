@@ -15,42 +15,25 @@ const map = new mapboxgl.Map({
   maxZoom: 18 // Maximum allowed zoom
 });
 
-// Select the SVG element inside the map container
-const svg = d3.select('#map').select('svg');
+// Initialize global variables
+let stations = [];
+let trips = [];
+let circles;
+let radiusScale;
+let timeFilter = -1; // Default to 'any time'
 
-// Initialize timeFilter with the default value (-1 for 'any time')
-let timeFilter = -1;
-
-// Select the slider and the time display element
-const timeSlider = document.getElementById('time-slider');
-const selectedTime = document.getElementById('selected-time');
-const anyTimeLabel = document.getElementById('any-time');
+// Helper function to convert coordinates using map.project()
+function getCoords(station) {
+  const point = new mapboxgl.LngLat(+station.lon, +station.lat);
+  const { x, y } = map.project(point);
+  return { cx: x, cy: y };
+}
 
 // Helper function to format time as HH:MM AM/PM
 function formatTime(minutes) {
-  const date = new Date(0, 0, 0, 0, minutes);  // Set hours & minutes
-  return date.toLocaleString('en-US', { timeStyle: 'short' }); // Format as HH:MM AM/PM
+  const date = new Date(0, 0, 0, Math.floor(minutes / 60), minutes % 60);
+  return date.toLocaleString('en-US', { timeStyle: 'short' });
 }
-
-// Update the time display based on slider value
-function updateTimeDisplay() {
-  timeFilter = Number(timeSlider.value);  // Get slider value
-
-  if (timeFilter === -1) {
-    selectedTime.textContent = '';  // Clear time display
-    anyTimeLabel.style.display = 'block';  // Show "(any time)"
-  } else {
-    selectedTime.textContent = formatTime(timeFilter);  // Display formatted time
-    anyTimeLabel.style.display = 'none';  // Hide "(any time)"
-  }
-
-  // Call updateScatterPlot to reflect the changes on the map
-  updateScatterPlot(timeFilter);
-}
-
-// Listen to slider input changes
-timeSlider.addEventListener('input', updateTimeDisplay);
-updateTimeDisplay();  // Initialize the display when the page loads
 
 // Helper function to compute station traffic (arrivals, departures, and total traffic)
 function computeStationTraffic(stations, trips) {
@@ -69,7 +52,7 @@ function computeStationTraffic(stations, trips) {
   );
 
   return stations.map((station) => {
-    let id = station.short_name;
+    const id = station.short_name;
     station.arrivals = arrivals.get(id) ?? 0;
     station.departures = departures.get(id) ?? 0;
     station.totalTraffic = station.arrivals + station.departures;
@@ -100,36 +83,54 @@ function filterTripsbyTime(trips, timeFilter) {
 // Function to update the scatter plot
 function updateScatterPlot(timeFilter) {
   // Only update the scatter plot if trips and stations are loaded
-  if (!trips || !stations) return;
+  if (!trips.length || !stations.length || !circles) return;
 
   // Filter trips based on the selected time
   const filteredTrips = filterTripsbyTime(trips, timeFilter);
   
   // Recompute station traffic based on filtered trips
-  const filteredStations = computeStationTraffic(stations, filteredTrips);
+  const stationsWithTraffic = computeStationTraffic(JSON.parse(JSON.stringify(stations)), filteredTrips);
+  
+  // Update the domain of the radius scale
+  const maxTraffic = d3.max(stationsWithTraffic, d => d.totalTraffic) || 1;
+  radiusScale.domain([0, maxTraffic]);
   
   // Dynamically adjust the range of the radius scale based on whether filtering is applied
   radiusScale.range(timeFilter === -1 ? [0, 25] : [3, 50]);
 
   // Update the scatterplot by adjusting the radius of circles
   circles
-    .data(filteredStations, (d) => d.short_name)
-    .join('circle')
-    .attr('r', (d) => radiusScale(d.totalTraffic)); // Update circle sizes
+    .data(stationsWithTraffic, d => d.short_name)
+    .attr('r', d => radiusScale(d.totalTraffic)) // Update circle sizes
+    .attr('cx', d => getCoords(d).cx) // Make sure positions are correct
+    .attr('cy', d => getCoords(d).cy);
+    
+  // Update tooltips
+  circles.select('title')
+    .text(d => `${d.name}: ${d.totalTraffic} trips (${d.departures} departures, ${d.arrivals} arrivals)`);
 }
 
-let stations = [];
-let trips = [];
+// Update positions of circles when map is moved or zoomed
+function updatePositions() {
+  if (circles) {
+    circles
+      .attr('cx', d => getCoords(d).cx)
+      .attr('cy', d => getCoords(d).cy);
+  }
+}
 
 // Wait for the map to load before adding data
 map.on('load', async () => {
+  // Select the SVG element inside the map container
+  const svg = d3.select('#map').select('svg');
+  
   try {
     // Fetch the Bluebikes station data
     const jsonurl = 'https://dsc106.com/labs/lab07/data/bluebikes-stations.json';
     const jsonData = await d3.json(jsonurl);
     stations = jsonData.data.stations;  // Access the stations array
 
-    // Fetch the traffic data using let instead of const
+    // Fetch the traffic data
     trips = await d3.csv(
       'https://dsc106.com/labs/lab07/data/bluebikes-traffic-2024-03.csv',
       (trip) => {
@@ -139,22 +140,89 @@ map.on('load', async () => {
       }
     );
 
-    // Create circles for each station based on traffic data
-    const circles = svg
+    console.log('Loaded data:', { stationsCount: stations.length, tripsCount: trips.length });
+    
+    // Create a radius scale for circles
+    radiusScale = d3
+      .scaleSqrt()
+      .domain([0, 1]) // Will be updated in updateScatterPlot
+      .range([0, 25]);
+    
+    // Compute initial traffic data
+    stations = computeStationTraffic(stations, trips);
+
+    // Create circles for each station
+    circles = svg
       .selectAll('circle')
-      .data(stations, (d) => d.short_name)  // Use short_name as the key
+      .data(stations, d => d.short_name)
       .enter()
       .append('circle')
-      .each(function(d) {
-        // Add <title> for tooltips
-        d3.select(this)
-          .append('title')
-          .text(`${d.totalTraffic} trips (${d.departures} departures, ${d.arrivals} arrivals)`);
-      });
-
-    // Update the scatterplot when the page loads
-    updateScatterPlot(timeFilter);
+      .attr('r', d => radiusScale(d.totalTraffic))
+      .attr('fill', 'steelblue')
+      .attr('stroke', 'white')
+      .attr('stroke-width', 1)
+      .attr('opacity', 0.8);
+      
+    // Add tooltips
+    circles.append('title')
+      .text(d => `${d.name}: ${d.totalTraffic} trips (${d.departures} departures, ${d.arrivals} arrivals)`);
+    
+    // Set initial positions
+    updatePositions();
+    
+    // Bind map events to update circle positions
+    map.on('move', updatePositions);
+    map.on('zoom', updatePositions);
+    map.on('resize', updatePositions);
+    
+    // Now that data is loaded, we can set up the time slider
+    const timeSliderContainer = document.createElement('div');
+    timeSliderContainer.className = 'time-control';
+    timeSliderContainer.innerHTML = `
+      <div class="time-display">
+        <span id="selected-time"></span>
+        <span id="any-time">(any time)</span>
+      </div>
+      <input type="range" id="time-slider" min="-1" max="1439" value="-1" step="30">
+      <div class="time-labels">
+        <span>Any Time</span>
+        <span>Morning</span>
+        <span>Afternoon</span>
+        <span>Evening</span>
+      </div>
+    `;
+    
+    // Add the slider to the map
+    map.getContainer().appendChild(timeSliderContainer);
+    
+    // Now we can safely access the DOM elements
+    const timeSlider = document.getElementById('time-slider');
+    const selectedTime = document.getElementById('selected-time');
+    const anyTimeLabel = document.getElementById('any-time');
+    
+    // Update time display function
+    function updateTimeDisplay() {
+      timeFilter = Number(timeSlider.value);
+      
+      if (timeFilter === -1) {
+        selectedTime.textContent = '';
+        anyTimeLabel.style.display = 'block';
+      } else {
+        selectedTime.textContent = formatTime(timeFilter);
+        anyTimeLabel.style.display = 'none';
+      }
+      
+      // Update the visualization with the new time filter
+      updateScatterPlot(timeFilter);
+    }
+    
+    // Add event listener to the slider
+    timeSlider.addEventListener('input', updateTimeDisplay);
+    
+    // Initial update
+    updateTimeDisplay();
+    
   } catch (error) {
-    console.error('Error loading data:', error); // Handle errors if the data fails to load
+    console.error('Error loading data:', error);
   }
 });
