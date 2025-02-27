@@ -105,3 +105,26 @@ html, body {
     background: #3b82f6;
     cursor: pointer;
   }
+
+  /* Circle styling */
+circle {
+    fill: var(--color);  /* Color set dynamically based on the flow */
+    stroke: white;
+    stroke-width: 1;
+    opacity: 0.8;
+    transition: fill 0.2s ease;  /* Smooth transition for color change */
+  }
+  
+  /* Define traffic flow colors */
+  circle {
+    --color-departures: steelblue;  /* Color for departures */
+    --color-arrivals: darkorange;   /* Color for arrivals */
+  
+    /* Mix the colors based on the departure ratio */
+    --color: color-mix(
+      in oklch,
+      var(--color-departures) calc(100% * var(--departure-ratio)),
+      var(--color-arrivals)
+    );
+  }
+  
