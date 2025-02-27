@@ -24,6 +24,11 @@
   <header>
     <h1>🚴🏼‍♀️ <strong>Bikewatching</strong></h1>
     <p>Explore bike traffic data in Boston at different times of the day.</p>
+
+    <!-- Time Filter Section -->
+    <label for="time-slider">Filter by time:</label>
+    <input type="range" id="time-slider" min="-1" max="1440" value="-1">
+    <time id="selected-time" style="display: block;">(any time)</time>
   </header>
 
   <div id="map">
